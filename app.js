@@ -559,28 +559,92 @@ function closeModal(modalId) {
     modal.classList.remove('active');
 }
 
+// 查看腳本
+function viewScript(scriptId) {
+    alert(`查看腳本詳情\n腳本ID: ${scriptId}`);
+    showToast('正在載入腳本詳情...', 'info');
+}
+
+// 刪除腳本
+function deleteScript(scriptId) {
+    if (confirm('確定要刪除這個腳本嗎？')) {
+        alert(`刪除腳本\n腳本ID: ${scriptId}`);
+        showToast('腳本已刪除', 'success');
+        // TODO: 實現真實的刪除API調用
+        // loadScripts(); // 重新載入列表
+    }
+}
+
 // ===== 腳本管理 =====
 async function loadScripts() {
     try {
-        const tbody = document.getElementById('scripts-table-body');
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">載入中...</td></tr>';
+        // 檢測是否為手機版
+        const isMobile = window.innerWidth <= 768;
+        const tableContainer = document.querySelector('#scripts .table-container');
         
         // TODO: 實現腳本列表API
         setTimeout(() => {
-            tbody.innerHTML = `
-                <tr>
-                    <td>1</td>
-                    <td>user123...</td>
-                    <td>美食短影音腳本</td>
-                    <td>抖音</td>
-                    <td>美食</td>
-                    <td>${formatDate(new Date())}</td>
-                    <td>
-                        <button class="btn-action btn-view">查看</button>
-                        <button class="btn-action btn-delete">刪除</button>
-                    </td>
-                </tr>
-            `;
+            const mockScripts = [
+                {
+                    id: 1,
+                    user_id: 'user123...',
+                    title: '美食短影音腳本',
+                    platform: '抖音',
+                    category: '美食',
+                    created_at: new Date()
+                }
+            ];
+            
+            if (isMobile) {
+                // 手機版：卡片式佈局
+                tableContainer.innerHTML = '';
+                const cardsContainer = document.createElement('div');
+                cardsContainer.className = 'mobile-cards-container';
+                
+                cardsContainer.innerHTML = mockScripts.map(script => `
+                    <div class="mobile-card">
+                        <div class="mobile-card-header">
+                            <span class="mobile-card-title">${script.title}</span>
+                            <span class="mobile-card-badge">${script.platform}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">用戶ID</span>
+                            <span class="mobile-card-value">${script.user_id}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">分類</span>
+                            <span class="mobile-card-value">${script.category}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">時間</span>
+                            <span class="mobile-card-value">${formatDate(script.created_at)}</span>
+                        </div>
+                        <div class="mobile-card-actions">
+                            <button class="btn-action btn-view" onclick="viewScript(${script.id})" type="button">查看</button>
+                            <button class="btn-action btn-delete" onclick="deleteScript(${script.id})" type="button">刪除</button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                tableContainer.appendChild(cardsContainer);
+            } else {
+                // 桌面版：表格佈局
+                const tbody = document.getElementById('scripts-table-body');
+                tbody.innerHTML = mockScripts.map(script => `
+                    <tr>
+                        <td>${script.id}</td>
+                        <td>${script.user_id}</td>
+                        <td>${script.title}</td>
+                        <td>${script.platform}</td>
+                        <td>${script.category}</td>
+                        <td>${formatDate(script.created_at)}</td>
+                        <td>
+                            <button class="btn-action btn-view" onclick="viewScript(${script.id})" type="button">查看</button>
+                            <button class="btn-action btn-delete" onclick="deleteScript(${script.id})" type="button">刪除</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
         }, 1000);
     } catch (error) {
         console.error('載入腳本失敗:', error);
@@ -591,21 +655,69 @@ async function loadScripts() {
 // ===== 生成記錄 =====
 async function loadGenerations() {
     try {
-        const tbody = document.getElementById('generations-table-body');
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">載入中...</td></tr>';
+        // 檢測是否為手機版
+        const isMobile = window.innerWidth <= 768;
+        const tableContainer = document.querySelector('#generations .table-container');
         
         // TODO: 實現生成記錄API
         setTimeout(() => {
-            tbody.innerHTML = `
-                <tr>
-                    <td>gen123...</td>
-                    <td>user123...</td>
-                    <td>抖音</td>
-                    <td>美食</td>
-                    <td>帳號定位</td>
-                    <td>${formatDate(new Date())}</td>
-                </tr>
-            `;
+            const mockGenerations = [
+                {
+                    id: 'gen123...',
+                    user_id: 'user123...',
+                    platform: '抖音',
+                    category: '美食',
+                    type: '帳號定位',
+                    created_at: new Date()
+                }
+            ];
+            
+            if (isMobile) {
+                // 手機版：卡片式佈局
+                tableContainer.innerHTML = '';
+                const cardsContainer = document.createElement('div');
+                cardsContainer.className = 'mobile-cards-container';
+                
+                cardsContainer.innerHTML = mockGenerations.map(gen => `
+                    <div class="mobile-card">
+                        <div class="mobile-card-header">
+                            <span class="mobile-card-title">${gen.type}</span>
+                            <span class="mobile-card-badge">${gen.platform}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">生成ID</span>
+                            <span class="mobile-card-value">${gen.id}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">用戶ID</span>
+                            <span class="mobile-card-value">${gen.user_id}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">分類</span>
+                            <span class="mobile-card-value">${gen.category}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">時間</span>
+                            <span class="mobile-card-value">${formatDate(gen.created_at)}</span>
+                        </div>
+                    </div>
+                `).join('');
+                
+                tableContainer.appendChild(cardsContainer);
+            } else {
+                // 桌面版：表格佈局
+                const tbody = document.getElementById('generations-table-body');
+                tbody.innerHTML = mockGenerations.map(gen => `
+                    <tr>
+                        <td>${gen.id}</td>
+                        <td>${gen.user_id}</td>
+                        <td>${gen.platform}</td>
+                        <td>${gen.category}</td>
+                        <td>${gen.type}</td>
+                        <td>${formatDate(gen.created_at)}</td>
+                    </tr>
+                `).join('');
+            }
         }, 1000);
     } catch (error) {
         console.error('載入生成記錄失敗:', error);

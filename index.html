@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI Video 後台管理系統</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+      /* 禁用雙擊縮放 */
+      * {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+      }
+      
+      /* 禁用文字選擇 */
+      body {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+      
+      /* 允許輸入框可選擇文字 */
+      input, textarea, select {
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        user-select: text;
+      }
+    </style>
+  </head>
+<body>
+    <div class="dashboard-container">
+        <!-- 側邊欄 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>🎬 AI Video</h2>
+                <p>後台管理系統</p>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-section="overview">
+                    <span class="icon">📊</span>
+                    <span>數據概覽</span>
+                </a>
+                <a href="#" class="nav-item" data-section="users">
+                    <span class="icon">👥</span>
+                    <span>用戶管理</span>
+                </a>
+                <a href="#" class="nav-item" data-section="modes">
+                    <span class="icon">🎯</span>
+                    <span>模式分析</span>
+                </a>
+                <a href="#" class="nav-item" data-section="conversations">
+                    <span class="icon">💬</span>
+                    <span>對話記錄</span>
+                </a>
+                <a href="#" class="nav-item" data-section="scripts">
+                    <span class="icon">📝</span>
+                    <span>腳本管理</span>
+                </a>
+                <a href="#" class="nav-item" data-section="generations">
+                    <span class="icon">✨</span>
+                    <span>生成記錄</span>
+                </a>
+                <a href="#" class="nav-item" data-section="analytics">
+                    <span class="icon">📈</span>
+                    <span>數據分析</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- 主內容區 -->
+        <div class="main-content">
+            <!-- 頂部導航 -->
+            <header class="top-header">
+                <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+                <h1 id="page-title">數據概覽</h1>
+                <div class="header-actions">
+                    <button class="btn-refresh" onclick="refreshData()">🔄 重新整理</button>
+                    <div class="time-display" id="current-time"></div>
+                </div>
+            </header>
+
+            <!-- 數據概覽頁面 -->
+            <div class="section active" id="overview">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <h3 id="total-users">-</h3>
+                            <p>總用戶數</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💬</div>
+                        <div class="stat-info">
+                            <h3 id="total-conversations">-</h3>
+                            <p>對話總數</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📝</div>
+                        <div class="stat-info">
+                            <h3 id="total-scripts">-</h3>
+                            <p>生成腳本</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-info">
+                            <h3 id="total-positioning">-</h3>
+                            <p>帳號定位</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3>用戶增長趨勢</h3>
+                        <canvas id="user-growth-chart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>模式使用分布</h3>
+                        <canvas id="mode-distribution-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="recent-activity">
+                    <h3>最近活動</h3>
+                    <div class="activity-list" id="recent-activities"></div>
+                </div>
+            </div>
+
+            <!-- 用戶管理頁面 -->
+            <div class="section" id="users">
+                <div class="section-header">
+                    <h2>用戶管理</h2>
+                    <div class="filters">
+                        <input type="text" id="user-search" placeholder="搜尋用戶..." onkeyup="filterUsers()">
+                        <select id="user-filter-platform" onchange="filterUsers()">
+                            <option value="">所有平台</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="users-table">
+                        <thead>
+                            <tr>
+                                <th>用戶ID</th>
+                                <th>Email</th>
+                                <th>姓名</th>
+                                <th>註冊時間</th>
+                                <th>對話數</th>
+                                <th>腳本數</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 模式分析頁面 -->
+            <div class="section" id="modes">
+                <div class="mode-stats">
+                    <div class="mode-card">
+                        <h3>🎯 一鍵生成模式</h3>
+                        <div class="mode-stats-grid">
+                            <div class="mode-stat">
+                                <span class="label">使用次數</span>
+                                <span class="value" id="mode1-count">-</span>
+                            </div>
+                            <div class="mode-stat">
+                                <span class="label">成功率</span>
+                                <span class="value" id="mode1-success">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mode-card">
+                        <h3>💬 AI顧問模式</h3>
+                        <div class="mode-stats-grid">
+                            <div class="mode-stat">
+                                <span class="label">對話數</span>
+                                <span class="value" id="mode2-count">-</span>
+                            </div>
+                            <div class="mode-stat">
+                                <span class="label">平均對話輪數</span>
+                                <span class="value" id="mode2-avg">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mode-card">
+                        <h3>🎭 IP人設規劃模式</h3>
+                        <div class="mode-stats-grid">
+                            <div class="mode-stat">
+                                <span class="label">使用次數</span>
+                                <span class="value" id="mode3-count">-</span>
+                            </div>
+                            <div class="mode-stat">
+                                <span class="label">生成Profile</span>
+                                <span class="value" id="mode3-profile">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>模式使用時間分布</h3>
+                    <canvas id="mode-time-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- 對話記錄頁面 -->
+            <div class="section" id="conversations">
+                <div class="section-header">
+                    <h2>對話記錄</h2>
+                    <select id="conversation-filter" onchange="loadConversations()">
+                        <option value="all">所有對話</option>
+                        <option value="mode2">AI顧問模式</option>
+                        <option value="mode3">IP人設規劃模式</option>
+                    </select>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="conversations-table">
+                        <thead>
+                            <tr>
+                                <th>用戶ID</th>
+                                <th>模式</th>
+                                <th>對話摘要</th>
+                                <th>消息數</th>
+                                <th>時間</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="conversations-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 腳本管理頁面 -->
+            <div class="section" id="scripts">
+                <div class="section-header">
+                    <h2>腳本管理</h2>
+                    <div class="filters">
+                        <select id="script-filter-user" onchange="loadScripts()">
+                            <option value="">所有用戶</option>
+                        </select>
+                        <select id="script-filter-platform" onchange="loadScripts()">
+                            <option value="">所有平台</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="scripts-table">
+                        <thead>
+                            <tr>
+                                <th>腳本ID</th>
+                                <th>用戶</th>
+                                <th>標題</th>
+                                <th>平台</th>
+                                <th>主題</th>
+                                <th>創建時間</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scripts-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 生成記錄頁面 -->
+            <div class="section" id="generations">
+                <div class="section-header">
+                    <h2>生成記錄</h2>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="generations-table">
+                        <thead>
+                            <tr>
+                                <th>生成ID</th>
+                                <th>用戶</th>
+                                <th>平台</th>
+                                <th>主題</th>
+                                <th>類型</th>
+                                <th>時間</th>
+                            </tr>
+                        </thead>
+                        <tbody id="generations-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 數據分析頁面 -->
+            <div class="section" id="analytics">
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h3>平台使用分布</h3>
+                        <canvas id="platform-chart"></canvas>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>時間段使用分析</h3>
+                        <canvas id="time-usage-chart"></canvas>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>用戶活躍度</h3>
+                        <canvas id="activity-chart"></canvas>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>內容類型分布</h3>
+                        <canvas id="content-type-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 對話詳情彈窗 -->
+    <div class="modal" id="conversation-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>對話詳情</h3>
+                <button class="modal-close" onclick="closeModal('conversation-modal')">✕</button>
+            </div>
+            <div class="modal-body" id="conversation-detail-content">
+                <!-- 對話內容將在這裡載入 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入 Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

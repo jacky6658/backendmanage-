@@ -559,10 +559,57 @@ function closeModal(modalId) {
     modal.classList.remove('active');
 }
 
-// 查看腳本
-function viewScript(scriptId) {
-    alert(`查看腳本詳情\n腳本ID: ${scriptId}`);
-    showToast('正在載入腳本詳情...', 'info');
+// 查看腳本（通過索引）
+function viewScriptByIdx(index) {
+    const script = window.allScripts?.[index];
+    if (!script) {
+        showToast('找不到腳本', 'error');
+        return;
+    }
+    
+    // 打開彈窗
+    const modal = document.getElementById('script-modal');
+    modal.classList.add('active');
+    
+    // 顯示載入中
+    const content = document.getElementById('script-detail-content');
+    content.innerHTML = '<p>載入腳本詳情中...</p>';
+    
+    // 渲染腳本內容
+    setTimeout(() => {
+        content.innerHTML = `
+            <div class="script-detail">
+                <div class="script-info">
+                    <div class="script-info-item">
+                        <span class="script-info-label">腳本標題</span>
+                        <span class="script-info-value">${script.title}</span>
+                    </div>
+                    <div class="script-info-item">
+                        <span class="script-info-label">平台</span>
+                        <span class="script-info-value">${script.platform}</span>
+                    </div>
+                    <div class="script-info-item">
+                        <span class="script-info-label">分類</span>
+                        <span class="script-info-value">${script.category}</span>
+                    </div>
+                    <div class="script-info-item">
+                        <span class="script-info-label">創建時間</span>
+                        <span class="script-info-value">${formatDate(script.created_at)}</span>
+                    </div>
+                </div>
+                
+                <div class="script-content">
+                    <h4>📝 腳本內容</h4>
+                    <div class="script-text">${script.content || '無內容'}</div>
+                </div>
+            </div>
+        `;
+    }, 100);
+}
+
+// 查看腳本（舊版兼容）
+function viewScript(scriptId, scriptContent, scriptTitle) {
+    viewScriptByIdx(0); // 簡單處理，實際應該根據ID查找
 }
 
 // 刪除腳本
@@ -582,70 +629,111 @@ async function loadScripts() {
         const isMobile = window.innerWidth <= 768;
         const tableContainer = document.querySelector('#scripts .table-container');
         
-        // TODO: 實現腳本列表API
-        setTimeout(() => {
-            const mockScripts = [
-                {
-                    id: 1,
-                    user_id: 'user123...',
-                    title: '美食短影音腳本',
-                    platform: '抖音',
-                    category: '美食',
-                    created_at: new Date()
-                }
-            ];
-            
+        // 獲取所有用戶
+        const usersResponse = await fetch(`${API_BASE_URL}/admin/users`);
+        const usersData = await usersResponse.json();
+        
+        if (!usersData.users || usersData.users.length === 0) {
             if (isMobile) {
-                // 手機版：卡片式佈局
-                tableContainer.innerHTML = '';
-                const cardsContainer = document.createElement('div');
-                cardsContainer.className = 'mobile-cards-container';
-                
-                cardsContainer.innerHTML = mockScripts.map(script => `
-                    <div class="mobile-card">
-                        <div class="mobile-card-header">
-                            <span class="mobile-card-title">${script.title}</span>
-                            <span class="mobile-card-badge">${script.platform}</span>
-                        </div>
-                        <div class="mobile-card-row">
-                            <span class="mobile-card-label">用戶ID</span>
-                            <span class="mobile-card-value">${script.user_id}</span>
-                        </div>
-                        <div class="mobile-card-row">
-                            <span class="mobile-card-label">分類</span>
-                            <span class="mobile-card-value">${script.category}</span>
-                        </div>
-                        <div class="mobile-card-row">
-                            <span class="mobile-card-label">時間</span>
-                            <span class="mobile-card-value">${formatDate(script.created_at)}</span>
-                        </div>
-                        <div class="mobile-card-actions">
-                            <button class="btn-action btn-view" onclick="viewScript(${script.id})" type="button">查看</button>
-                            <button class="btn-action btn-delete" onclick="deleteScript(${script.id})" type="button">刪除</button>
-                        </div>
-                    </div>
-                `).join('');
-                
-                tableContainer.appendChild(cardsContainer);
+                tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">暫無腳本記錄</div>';
             } else {
-                // 桌面版：表格佈局
-                const tbody = document.getElementById('scripts-table-body');
-                tbody.innerHTML = mockScripts.map(script => `
-                    <tr>
-                        <td>${script.id}</td>
-                        <td>${script.user_id}</td>
-                        <td>${script.title}</td>
-                        <td>${script.platform}</td>
-                        <td>${script.category}</td>
-                        <td>${formatDate(script.created_at)}</td>
-                        <td>
-                            <button class="btn-action btn-view" onclick="viewScript(${script.id})" type="button">查看</button>
-                            <button class="btn-action btn-delete" onclick="deleteScript(${script.id})" type="button">刪除</button>
-                        </td>
-                    </tr>
-                `).join('');
+                document.getElementById('scripts-table-body').innerHTML = 
+                    '<tr><td colspan="7" style="text-align: center; padding: 2rem;">暫無腳本記錄</td></tr>';
             }
-        }, 1000);
+            return;
+        }
+        
+        // 為每個用戶獲取腳本
+        let allScripts = [];
+        for (const user of usersData.users) {
+            try {
+                const scriptsResponse = await fetch(`${API_BASE_URL}/scripts/my?user_id=${user.user_id}`);
+                if (scriptsResponse.ok) {
+                    const scriptsData = await scriptsResponse.json();
+                    if (scriptsData.scripts && scriptsData.scripts.length > 0) {
+                        scriptsData.scripts.forEach(script => {
+                            allScripts.push({
+                                id: script.id,
+                                user_id: user.user_id,
+                                title: script.title || script.name || '未命名腳本',
+                                platform: script.platform || '未設定',
+                                category: script.topic || '未分類',
+                                content: script.content || '',
+                                created_at: script.created_at || script.createdAt
+                            });
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error(`獲取用戶 ${user.user_id} 的腳本失敗:`, e);
+            }
+        }
+        
+        // 顯示腳本
+        if (allScripts.length === 0) {
+            if (isMobile) {
+                tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">暫無腳本記錄</div>';
+            } else {
+                document.getElementById('scripts-table-body').innerHTML = 
+                    '<tr><td colspan="7" style="text-align: center; padding: 2rem;">暫無腳本記錄</td></tr>';
+            }
+            return;
+        }
+        
+        if (isMobile) {
+            // 手機版：卡片式佈局
+            tableContainer.innerHTML = '';
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = 'mobile-cards-container';
+            
+            cardsContainer.innerHTML = allScripts.map((script, index) => `
+                <div class="mobile-card">
+                    <div class="mobile-card-header">
+                        <span class="mobile-card-title">${script.title}</span>
+                        <span class="mobile-card-badge">${script.platform}</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">用戶ID</span>
+                        <span class="mobile-card-value">${script.user_id.substring(0, 16)}...</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">分類</span>
+                        <span class="mobile-card-value">${script.category}</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">時間</span>
+                        <span class="mobile-card-value">${formatDate(script.created_at)}</span>
+                    </div>
+                    <div class="mobile-card-actions">
+                        <button class="btn-action btn-view" onclick="viewScriptByIdx(${index})" type="button">查看</button>
+                        <button class="btn-action btn-delete" onclick="deleteScript(${script.id})" type="button">刪除</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            tableContainer.appendChild(cardsContainer);
+        } else {
+            // 桌面版：表格佈局
+            const tbody = document.getElementById('scripts-table-body');
+            tbody.innerHTML = allScripts.map((script, index) => `
+                <tr>
+                    <td>${script.id}</td>
+                    <td>${script.user_id.substring(0, 12)}...</td>
+                    <td>${script.title}</td>
+                    <td>${script.platform}</td>
+                    <td>${script.category}</td>
+                    <td>${formatDate(script.created_at)}</td>
+                    <td>
+                        <button class="btn-action btn-view" onclick="viewScriptByIdx(${index})" type="button">查看</button>
+                        <button class="btn-action btn-delete" onclick="deleteScript(${script.id})" type="button">刪除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // 保存腳本數據供查看功能使用
+        window.allScripts = allScripts;
+        
     } catch (error) {
         console.error('載入腳本失敗:', error);
         showToast('載入腳本失敗', 'error');

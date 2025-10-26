@@ -641,35 +641,85 @@ body {
         width: 100%;
     }
     
-    /* 表格在手機上自動調整 */
+    /* 手機版表格改為卡片式佈局 */
     .table-container {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        overflow-x: visible;
     }
     
-    /* 手機版表格字體更小，欄位更緊湊 */
-    .data-table {
-        font-size: 0.7rem;
+    /* 在手機版隱藏表格標題 */
+    .data-table thead {
+        display: none !important;
     }
     
-    .data-table th,
-    .data-table td {
-        padding: 0.5rem 0.25rem;
-        font-size: 0.7rem;
+    /* 手機版卡片容器 */
+    .mobile-cards-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
     }
     
-    /* 手機版隱藏部分欄位 */
-    .data-table th:nth-child(1),
-    .data-table td:nth-child(1) {
-        max-width: 80px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+    /* 自定義卡片樣式 */
+    .mobile-card {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 0.75rem;
+        padding: 1rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
     
-    .data-table th:nth-child(6),
-    .data-table td:nth-child(6) {
-        display: none;
+    .mobile-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .mobile-card-title {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+    
+    .mobile-card-badge {
+        background: var(--primary-color);
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+    }
+    
+    .mobile-card-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        padding: 0.5rem 0;
+    }
+    
+    .mobile-card-label {
+        font-weight: 500;
+        color: var(--text-light);
+        min-width: 80px;
+    }
+    
+    .mobile-card-value {
+        flex: 1;
+        text-align: right;
+        color: var(--text-color);
+        word-break: break-all;
+    }
+    
+    .mobile-card-actions {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .mobile-card-actions .btn-action {
+        flex: 1;
+        text-align: center;
     }
     
     /* 調整按鈕大小 */

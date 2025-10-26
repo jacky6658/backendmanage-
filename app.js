@@ -10,6 +10,18 @@ document.addEventListener('DOMContentLoaded', function() {
     updateTime();
     setInterval(updateTime, 1000);
     loadOverview();
+    
+    // 監聽視窗大小改變，重新載入當前頁面數據以切換佈局
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            const activeSection = document.querySelector('.section.active');
+            if (activeSection) {
+                loadSectionData(activeSection.id);
+            }
+        }, 300);
+    });
 });
 
 // 導航控制
@@ -235,20 +247,62 @@ async function loadUsers() {
         const response = await fetch(`${API_BASE_URL}/admin/users`);
         const data = await response.json();
         
-        const tbody = document.getElementById('users-table-body');
-        tbody.innerHTML = data.users.map(user => `
-            <tr>
-                <td>${user.user_id.substring(0, 12)}...</td>
-                <td>${user.email}</td>
-                <td>${user.name || '-'}</td>
-                <td>${formatDate(user.created_at)}</td>
-                <td>-</td>
-                <td>-</td>
-                <td>
-                    <button class="btn-action btn-view" onclick="viewUser('${user.user_id}')" type="button">查看</button>
-                </td>
-            </tr>
-        `).join('');
+        // 檢測是否為手機版
+        const isMobile = window.innerWidth <= 768;
+        const tableContainer = document.querySelector('.table-container');
+        
+        if (isMobile) {
+            // 手機版：卡片式佈局
+            // 清空表格內容
+            tableContainer.innerHTML = '';
+            
+            // 創建卡片容器
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = 'mobile-cards-container';
+            
+            // 添加卡片
+            cardsContainer.innerHTML = data.users.map(user => `
+                <div class="mobile-card">
+                    <div class="mobile-card-header">
+                        <span class="mobile-card-title">${user.name || '未命名用戶'}</span>
+                        <span class="mobile-card-badge">用戶</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">用戶ID</span>
+                        <span class="mobile-card-value">${user.user_id.substring(0, 16)}...</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">Email</span>
+                        <span class="mobile-card-value">${user.email}</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">註冊時間</span>
+                        <span class="mobile-card-value">${formatDate(user.created_at)}</span>
+                    </div>
+                    <div class="mobile-card-actions">
+                        <button class="btn-action btn-view" onclick="viewUser('${user.user_id}')" type="button">查看詳情</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            tableContainer.appendChild(cardsContainer);
+        } else {
+            // 桌面版：表格佈局
+            const tbody = document.getElementById('users-table-body');
+            tbody.innerHTML = data.users.map(user => `
+                <tr>
+                    <td>${user.user_id.substring(0, 12)}...</td>
+                    <td>${user.email}</td>
+                    <td>${user.name || '-'}</td>
+                    <td>${formatDate(user.created_at)}</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>
+                        <button class="btn-action btn-view" onclick="viewUser('${user.user_id}')" type="button">查看</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
     } catch (error) {
         console.error('載入用戶失敗:', error);
         showToast('載入用戶數據失敗', 'error');
@@ -331,15 +385,21 @@ async function loadConversations() {
     try {
         const filter = document.getElementById('conversation-filter').value;
         
-        const tbody = document.getElementById('conversations-table-body');
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">載入中...</td></tr>';
+        // 檢測是否為手機版
+        const isMobile = window.innerWidth <= 768;
+        const tableContainer = document.querySelector('#conversations .table-container');
         
         // 獲取所有用戶
         const usersResponse = await fetch(`${API_BASE_URL}/admin/users`);
         const usersData = await usersResponse.json();
         
         if (!usersData.users || usersData.users.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">暫無對話記錄</td></tr>';
+            if (isMobile) {
+                tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">暫無對話記錄</div>';
+            } else {
+                document.getElementById('conversations-table-body').innerHTML = 
+                    '<tr><td colspan="6" style="text-align: center; padding: 2rem;">暫無對話記錄</td></tr>';
+            }
             return;
         }
         
@@ -369,13 +429,50 @@ async function loadConversations() {
         
         // 顯示對話記錄
         if (allConversations.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">暫無對話記錄</td></tr>';
+            if (isMobile) {
+                tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">暫無對話記錄</div>';
+            } else {
+                document.getElementById('conversations-table-body').innerHTML = 
+                    '<tr><td colspan="6" style="text-align: center; padding: 2rem;">暫無對話記錄</td></tr>';
+            }
             return;
         }
         
-        let html = '';
-        allConversations.forEach(conv => {
-            html += `
+        if (isMobile) {
+            // 手機版：卡片式佈局
+            tableContainer.innerHTML = '';
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = 'mobile-cards-container';
+            
+            cardsContainer.innerHTML = allConversations.map(conv => `
+                <div class="mobile-card">
+                    <div class="mobile-card-header">
+                        <span class="mobile-card-title">${conv.mode}</span>
+                        <span class="mobile-card-badge">${conv.message_count} 條消息</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">用戶ID</span>
+                        <span class="mobile-card-value">${conv.user_id.substring(0, 16)}...</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">對話摘要</span>
+                        <span class="mobile-card-value">${conv.summary.substring(0, 40)}...</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">時間</span>
+                        <span class="mobile-card-value">${formatDate(conv.created_at)}</span>
+                    </div>
+                    <div class="mobile-card-actions">
+                        <button class="btn-action btn-view" onclick="viewConversation('${conv.user_id}', '${conv.mode}')" type="button">查看詳情</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            tableContainer.appendChild(cardsContainer);
+        } else {
+            // 桌面版：表格佈局
+            const tbody = document.getElementById('conversations-table-body');
+            tbody.innerHTML = allConversations.map(conv => `
                 <tr>
                     <td>${conv.user_id.substring(0, 12)}...</td>
                     <td>${conv.mode}</td>
@@ -386,15 +483,20 @@ async function loadConversations() {
                         <button class="btn-action btn-view" onclick="viewConversation('${conv.user_id}', '${conv.mode}')" type="button">查看</button>
                     </td>
                 </tr>
-            `;
-        });
-        tbody.innerHTML = html;
+            `).join('');
+        }
         
     } catch (error) {
         console.error('載入對話記錄失敗:', error);
         showToast('載入對話記錄失敗', 'error');
-        document.getElementById('conversations-table-body').innerHTML = 
-            '<tr><td colspan="6" style="text-align: center; padding: 2rem;">載入失敗</td></tr>';
+        const isMobile = window.innerWidth <= 768;
+        const tableContainer = document.querySelector('#conversations .table-container');
+        if (isMobile) {
+            tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">載入失敗</div>';
+        } else {
+            document.getElementById('conversations-table-body').innerHTML = 
+                '<tr><td colspan="6" style="text-align: center; padding: 2rem;">載入失敗</td></tr>';
+        }
     }
 }
 

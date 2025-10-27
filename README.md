@@ -1,4 +1,4 @@
-# AI Video 後台管理系統
+# AIJob ReelMind 後台管理系統
 
 ## 📋 專案說明
 

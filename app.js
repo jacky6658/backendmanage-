@@ -484,43 +484,10 @@ async function loadConversations() {
         const isMobile = window.innerWidth <= 768;
         const tableContainer = document.querySelector('#conversations .table-container');
         
-        // 獲取所有用戶
-        const usersResponse = await fetch(`${API_BASE_URL}/admin/users`);
-        const usersData = await usersResponse.json();
-        
-        if (!usersData.users || usersData.users.length === 0) {
-            if (isMobile) {
-                tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">暫無對話記錄</div>';
-            } else {
-                document.getElementById('conversations-table-body').innerHTML = 
-                    '<tr><td colspan="6" style="text-align: center; padding: 2rem;">暫無對話記錄</td></tr>';
-            }
-            return;
-        }
-        
-        // 為每個用戶獲取對話記錄
-        let allConversations = [];
-        for (const user of usersData.users) {
-            try {
-                const convResponse = await fetch(`${API_BASE_URL}/user/conversations/${user.user_id}`);
-                if (convResponse.ok) {
-                    const convData = await convResponse.json();
-                    if (convData.conversations && convData.conversations.length > 0) {
-                        convData.conversations.forEach(conv => {
-                            allConversations.push({
-                                user_id: user.user_id,
-                                mode: conv.conversation_type || 'AI顧問',
-                                summary: conv.summary || '對話記錄',
-                                message_count: conv.message_count || 0,
-                                created_at: conv.created_at
-                            });
-                        });
-                    }
-                }
-            } catch (e) {
-                console.error(`獲取用戶 ${user.user_id} 的對話記錄失敗:`, e);
-            }
-        }
+        // 直接獲取所有對話記錄
+        const response = await fetch(`${API_BASE_URL}/admin/conversations`);
+        const data = await response.json();
+        const allConversations = data.conversations || [];
         
         // 顯示對話記錄
         if (allConversations.length === 0) {
@@ -737,45 +704,10 @@ async function loadScripts() {
         const isMobile = window.innerWidth <= 768;
         const tableContainer = document.querySelector('#scripts .table-container');
         
-        // 獲取所有用戶
-        const usersResponse = await fetch(`${API_BASE_URL}/admin/users`);
-        const usersData = await usersResponse.json();
-        
-        if (!usersData.users || usersData.users.length === 0) {
-            if (isMobile) {
-                tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">暫無腳本記錄</div>';
-            } else {
-                document.getElementById('scripts-table-body').innerHTML = 
-                    '<tr><td colspan="7" style="text-align: center; padding: 2rem;">暫無腳本記錄</td></tr>';
-            }
-            return;
-        }
-        
-        // 為每個用戶獲取腳本
-        let allScripts = [];
-        for (const user of usersData.users) {
-            try {
-                const scriptsResponse = await fetch(`${API_BASE_URL}/scripts/my?user_id=${user.user_id}`);
-                if (scriptsResponse.ok) {
-                    const scriptsData = await scriptsResponse.json();
-                    if (scriptsData.scripts && scriptsData.scripts.length > 0) {
-                        scriptsData.scripts.forEach(script => {
-                            allScripts.push({
-                                id: script.id,
-                                user_id: user.user_id,
-                                title: script.title || script.name || '未命名腳本',
-                                platform: script.platform || '未設定',
-                                category: script.topic || '未分類',
-                                content: script.content || '',
-                                created_at: script.created_at || script.createdAt
-                            });
-                        });
-                    }
-                }
-            } catch (e) {
-                console.error(`獲取用戶 ${user.user_id} 的腳本失敗:`, e);
-            }
-        }
+        // 直接獲取所有腳本
+        const response = await fetch(`${API_BASE_URL}/admin/scripts`);
+        const data = await response.json();
+        const allScripts = data.scripts || [];
         
         // 顯示腳本
         if (allScripts.length === 0) {
@@ -797,8 +729,8 @@ async function loadScripts() {
             cardsContainer.innerHTML = allScripts.map((script, index) => `
                 <div class="mobile-card">
                     <div class="mobile-card-header">
-                        <span class="mobile-card-title">${script.title}</span>
-                        <span class="mobile-card-badge">${script.platform}</span>
+                        <span class="mobile-card-title">${script.title || script.name || '未命名腳本'}</span>
+                        <span class="mobile-card-badge">${script.platform || '未設定'}</span>
                     </div>
                     <div class="mobile-card-row">
                         <span class="mobile-card-label">用戶ID</span>
@@ -806,7 +738,7 @@ async function loadScripts() {
                     </div>
                     <div class="mobile-card-row">
                         <span class="mobile-card-label">分類</span>
-                        <span class="mobile-card-value">${script.category}</span>
+                        <span class="mobile-card-value">${script.category || script.topic || '未分類'}</span>
                     </div>
                     <div class="mobile-card-row">
                         <span class="mobile-card-label">時間</span>
@@ -827,9 +759,9 @@ async function loadScripts() {
                 <tr>
                     <td>${script.id}</td>
                     <td>${script.user_id.substring(0, 12)}...</td>
-                    <td>${script.title}</td>
-                    <td>${script.platform}</td>
-                    <td>${script.category}</td>
+                    <td>${script.title || script.name || '未命名腳本'}</td>
+                    <td>${script.platform || '未設定'}</td>
+                    <td>${script.category || script.topic || '未分類'}</td>
                     <td>${formatDate(script.created_at)}</td>
                     <td>
                         <button class="btn-action btn-view" onclick="viewScriptByIdx(${index})" type="button">查看</button>

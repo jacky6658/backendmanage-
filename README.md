@@ -223,6 +223,122 @@ const API_BASE_URL = 'https://aivideobackend.zeabur.app/api';
 
 無
 
+## 📊 資料對應說明
+
+### 後台管理系統數據來源
+
+所有數據都從 PostgreSQL 資料庫中讀取，以下是各頁面的數據對應表：
+
+---
+
+#### 1. 數據概覽頁面 📊
+
+**統計卡片**：
+| 顯示欄位 | 資料表 | 欄位 | 說明 |
+|---------|--------|------|------|
+| 總用戶數 | user_auth | COUNT(*) | 所有註冊用戶總數 |
+| 今日新增用戶 | user_auth | COUNT(*) WHERE created_at = 今天 | 今天註冊的用戶數 |
+| 對話總數 | conversation_summaries | COUNT(*) | 所有對話記錄總數 |
+| 生成腳本總數 | user_scripts | COUNT(*) | 所有生成的腳本總數 |
+| 帳號定位數 | conversation_summaries | COUNT(*) WHERE conversation_type = 'account_positioning' | 帳號定位對話數 |
+| 生成記錄數 | generations | COUNT(*) | 所有生成記錄總數 |
+| 7天活躍用戶 | user_scripts | COUNT(DISTINCT user_id) WHERE created_at >= 7天前 | 最近7天有生成腳本的用戶 |
+
+**圖表數據**：
+| 圖表 | 資料表 | 計算方式 |
+|------|--------|----------|
+| 用戶增長趨勢 | user_auth | 每天的新用戶數 |
+| 模式使用分布 | conversation_summaries | 按 conversation_type 分組統計 |
+| 最近活動 | user_auth, user_scripts, conversation_summaries | 最近10個活動記錄 |
+
+---
+
+#### 2. 用戶管理頁面 👥
+
+| 顯示欄位 | 資料表 | 欄位 | 說明 |
+|---------|--------|------|------|
+| 用戶ID | user_auth | user_id | 唯一標識符 |
+| Email | user_auth | email | 用戶郵箱 |
+| 姓名 | user_auth | name | 用戶姓名 |
+| 訂閱狀態 | user_auth | is_subscribed | 0=未訂閱, 1=已訂閱 |
+| 註冊時間 | user_auth | created_at | 帳號創建時間 |
+| **對話數** | conversation_summaries | COUNT(*) WHERE user_id = ? | **該用戶的對話總數** |
+| **腳本數** | user_scripts | COUNT(*) WHERE user_id = ? | **該用戶的腳本總數** |
+
+**資料來源**：`GET /api/admin/users`
+
+---
+
+#### 3. 模式分析頁面 🎯
+
+| 顯示欄位 | 資料表 | 計算方式 |
+|---------|--------|----------|
+| 一鍵生成模式使用次數 | conversation_summaries | COUNT(*) WHERE conversation_type = 'account_positioning' |
+| AI顧問對話數 | conversation_summaries | COUNT(*) WHERE conversation_type IN ('topic_selection', 'script_generation', 'general_consultation') |
+| IP人設規劃使用次數 | conversation_summaries | COUNT(*) WHERE conversation_type = 'ip_planning' |
+| 時間分布 | conversation_summaries | 按小時統計對話分布 |
+
+**資料來源**：`GET /api/admin/mode-statistics`
+
+---
+
+#### 4. 對話記錄頁面 💬
+
+| 顯示欄位 | 資料表 | 欄位 | 說明 |
+|---------|--------|------|------|
+| 用戶ID | conversation_summaries | user_id | 用戶唯一標識符 |
+| 模式 | conversation_summaries | conversation_type | 對話類型 |
+| 摘要 | conversation_summaries | summary | 對話摘要 |
+| 消息數 | conversation_summaries | message_count | 該對話的消息數量 |
+| 時間 | conversation_summaries | created_at | 對話創建時間 |
+
+**資料來源**：`GET /api/admin/users` + `GET /api/user/conversations/{user_id}`
+
+---
+
+#### 5. 腳本管理頁面 📝
+
+| 顯示欄位 | 資料表 | 欄位 | 說明 |
+|---------|--------|------|------|
+| 腳本ID | user_scripts | id | 腳本唯一標識符 |
+| 用戶ID | user_scripts | user_id | 用戶唯一標識符 |
+| 標題 | user_scripts | title | 腳本標題 |
+| 平台 | user_scripts | platform | 目標平台（抖音、小紅書等） |
+| 主題 | user_scripts | topic | 腳本主題 |
+| 創建時間 | user_scripts | created_at | 腳本創建時間 |
+
+**資料來源**：`GET /api/admin/users` + `GET /api/scripts/my?user_id={user_id}`
+
+---
+
+#### 6. 生成記錄頁面 ✨
+
+| 顯示欄位 | 資料表 | 欄位 | 說明 |
+|---------|--------|------|------|
+| 生成ID | generations | id | 生成記錄唯一標識符 |
+| 用戶名稱 | user_auth | name | 用戶姓名 |
+| 平台 | generations | platform | 目標平台 |
+| 主題 | generations | topic | 生成主題 |
+| 內容 | generations | content | 生成內容（前100字） |
+| 創建時間 | generations | created_at | 生成時間 |
+
+**資料來源**：`GET /api/admin/generations`
+
+---
+
+#### 7. 數據分析頁面 📈
+
+| 圖表 | 資料表 | 計算方式 |
+|------|--------|----------|
+| 平台使用分布 | user_scripts | 按 platform 分組統計 |
+| 時間段使用分析 | user_scripts | 按星期統計每天的使用量 |
+| 用戶活躍度 | user_scripts | 按週統計活躍用戶數 |
+| 內容類型分布 | user_scripts | 按 topic 分組統計 |
+
+**資料來源**：`GET /api/admin/analytics-data`
+
+---
+
 ## 📞 支援
 
 如有問題或建議，請聯繫開發團隊。

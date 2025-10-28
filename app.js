@@ -352,8 +352,8 @@ async function loadUsers() {
                     <td>${user.name || '-'}</td>
                     <td id="subscribe-status-${user.user_id}">${subscribeStatus}</td>
                     <td>${formatDate(user.created_at)}</td>
-                    <td>-</td>
-                    <td>-</td>
+                    <td>${user.conversation_count || 0}</td>
+                    <td>${user.script_count || 0}</td>
                     <td>
                         <button class="btn-action btn-subscribe ${isSubscribed ? 'btn-danger' : 'btn-success'}" 
                                 onclick="toggleSubscribe('${user.user_id}', ${!isSubscribed})" 

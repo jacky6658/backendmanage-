@@ -50,6 +50,7 @@ function switchSection(section) {
         'modes': '模式分析',
         'conversations': '對話記錄',
         'scripts': '腳本管理',
+        'orders': '購買記錄',
         'generations': '生成記錄',
         'analytics': '數據分析'
     };
@@ -81,6 +82,9 @@ function loadSectionData(section) {
             break;
         case 'scripts':
             loadScripts();
+            break;
+        case 'orders':
+            loadOrders();
             break;
         case 'generations':
             loadGenerations();
@@ -1095,4 +1099,131 @@ async function exportCSV(type) {
         showToast('匯出 CSV 失敗', 'error');
     }
 }
- 
+
+// ===== 購買記錄 =====
+async function loadOrders() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/orders`);
+        const data = await response.json();
+        const allOrders = data.orders || [];
+        
+        console.log('訂單數據:', allOrders);
+        
+        const tableContainer = document.querySelector('#orders .table-container');
+        if (!tableContainer) {
+            console.error('找不到訂單表格容器');
+            return;
+        }
+        
+        // 生成表格HTML
+        let tableHTML = `
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>訂單編號</th>
+                            <th>用戶</th>
+                            <th>方案</th>
+                            <th>金額</th>
+                            <th>付款方式</th>
+                            <th>付款狀態</th>
+                            <th>付款時間</th>
+                            <th>到期日期</th>
+                            <th>發票號碼</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        allOrders.forEach(order => {
+            const orderDate = order.created_at ? new Date(order.created_at).toLocaleString('zh-TW', {
+                timeZone: 'Asia/Taipei',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }) : '未知';
+            
+            const paidDate = order.paid_at ? new Date(order.paid_at).toLocaleString('zh-TW', {
+                timeZone: 'Asia/Taipei',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }) : '-';
+            
+            const expiresDate = order.expires_at ? new Date(order.expires_at).toLocaleString('zh-TW', {
+                timeZone: 'Asia/Taipei',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }) : '-';
+            
+            tableHTML += `
+                <tr>
+                    <td>${order.order_id || order.id}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span>${order.user_name || '未知用戶'}</span>
+                            <span style="font-size: 0.85rem; color: #64748b;">${order.user_email || ''}</span>
+                        </div>
+                    </td>
+                    <td>${order.plan_type === 'monthly' ? '月費' : '年費'}</td>
+                    <td>NT$${order.amount?.toLocaleString() || 0}</td>
+                    <td>${order.payment_method || '-'}</td>
+                    <td>
+                        <span class="badge ${order.payment_status === 'paid' ? 'badge-success' : 'badge-danger'}">
+                            ${order.payment_status === 'paid' ? '已付款' : '待付款'}
+                        </span>
+                    </td>
+                    <td>${paidDate}</td>
+                    <td>${expiresDate}</td>
+                    <td>${order.invoice_number || '-'}</td>
+                </tr>
+            `;
+        });
+        
+        tableHTML += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        tableContainer.innerHTML = tableHTML;
+        
+        // 更新統計
+        const totalRevenue = allOrders.filter(o => o.payment_status === 'paid').reduce((sum, o) => sum + (o.amount || 0), 0);
+        const paidCount = allOrders.filter(o => o.payment_status === 'paid').length;
+        const pendingCount = allOrders.filter(o => o.payment_status !== 'paid').length;
+        
+        // 更新統計卡片（如果存在）
+        const statsContainer = document.querySelector('#orders .stats-grid');
+        if (statsContainer) {
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-icon">💳</div>
+                    <div class="stat-value">${allOrders.length}</div>
+                    <div class="stat-label">總訂單數</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-value">${paidCount}</div>
+                    <div class="stat-label">已付款</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-value">${pendingCount}</div>
+                    <div class="stat-label">待付款</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-value">NT$${totalRevenue.toLocaleString()}</div>
+                    <div class="stat-label">總營收</div>
+                </div>
+            `;
+        }
+        
+        showToast(`已載入 ${allOrders.length} 筆訂單記錄`, 'success');
+    } catch (error) {
+        console.error('載入訂單失敗:', error);
+        showToast('載入訂單失敗', 'error');
+    }
+}

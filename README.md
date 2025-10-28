@@ -1,5 +1,32 @@
 # AIJob ReelMind 後台管理系統
 
+## 📌 專案整合報告（後台 ReelMindmanage-system）
+
+### 一、專案總覽（角色與資料流）
+- **角色定位**：管理者儀表板，讀取後端 Admin API 顯示用戶/對話/腳本/生成/模式/分析與「購買記錄」。
+- **資料來源**：全部來自後端（FastAPI）Admin API，資料儲存 PostgreSQL。
+
+### 二、目前擁有功能（重點）
+- ✅ 完整分頁：數據概覽、用戶、模式、對話、腳本、生成、數據分析、購買記錄
+- ✅ 用戶詳情彈窗：讀取授權與訂單
+- ✅ 多表 CSV 匯出（可擴增訂單匯出）
+
+### 三、系統架構與資料流（簡）
+- 後台（本專案）→ 後端 Admin API → PostgreSQL
+- 關聯端點：`/api/admin/users`、`/api/admin/mode-statistics`、`/api/admin/conversations`、`/api/admin/scripts`、`/api/admin/orders`、`/api/admin/analytics-data`
+
+### 四、尚未解決/待辦（Admin）
+- ⏳ 訂單 CSV 匯出與篩選（日期/狀態）
+- ⏳ Admin 權限/認證保護（JWT/白名單）
+
+### 五、已解決重點（Admin）
+- ✅ 移除假數據，所有圖表/表格接後端真實資料
+- ✅ 新增「購買記錄」分頁與統計卡
+- ✅ 用戶詳情彈窗整合授權/訂單 API
+
+---
+（以下為原 README 內容）
+
 ## 📋 專案說明
 
 這是 **AIJob ReelMind 短影音智能體** 的**後台管理系統**，用於查看和管理所有用戶數據。

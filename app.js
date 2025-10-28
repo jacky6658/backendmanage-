@@ -157,88 +157,124 @@ async function loadOverview() {
     }
 }
 
-function loadCharts(stats) {
-    // 用戶增長趨勢圖
-    if (charts.userGrowth) charts.userGrowth.destroy();
-    const userGrowthCtx = document.getElementById('user-growth-chart');
-    charts.userGrowth = new Chart(userGrowthCtx, {
-        type: 'line',
-        data: {
-            labels: ['週一', '週二', '週三', '週四', '週五', '週六', '週日'],
-            datasets: [{
-                label: '新增用戶',
-                data: [12, 19, 15, 25, 22, 30, 28],
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: 2,
-            plugins: {
-                legend: {
-                    display: false
+async function loadCharts(stats) {
+    try {
+        // 調用 API 獲取模式統計
+        const response = await fetch(`${API_BASE_URL}/admin/mode-statistics`);
+        const modeData = await response.json();
+        
+        // 用戶增長趨勢圖 - 暫時使用統計數據替代（需要 API 支援）
+        if (charts.userGrowth) charts.userGrowth.destroy();
+        const userGrowthCtx = document.getElementById('user-growth-chart');
+        charts.userGrowth = new Chart(userGrowthCtx, {
+            type: 'line',
+            data: {
+                labels: ['週一', '週二', '週三', '週四', '週五', '週六', '週日'],
+                datasets: [{
+                    label: '新增用戶',
+                    data: [0, 0, 0, 0, 0, 0, stats?.today_users || 0],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
                 }
             }
-        }
-    });
-    
-    // 模式使用分布圖
-    if (charts.modeDistribution) charts.modeDistribution.destroy();
-    const modeDistributionCtx = document.getElementById('mode-distribution-chart');
-    charts.modeDistribution = new Chart(modeDistributionCtx, {
-        type: 'doughnut',
-        data: {
-            labels: ['一鍵生成', 'AI顧問', 'IP人設規劃'],
-            datasets: [{
-                data: [45, 35, 20],
-                backgroundColor: [
-                    '#3b82f6',
-                    '#8b5cf6',
-                    '#f59e0b'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: 2
-        }
-    });
+        });
+        
+        // 模式使用分布圖 - 使用真實數據
+        if (charts.modeDistribution) charts.modeDistribution.destroy();
+        const modeDistributionCtx = document.getElementById('mode-distribution-chart');
+        const modeStats = modeData.mode_stats || {};
+        charts.modeDistribution = new Chart(modeDistributionCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['一鍵生成', 'AI顧問', 'IP人設規劃'],
+                datasets: [{
+                    data: [
+                        modeStats.mode1_quick_generate?.count || 0,
+                        modeStats.mode2_ai_consultant?.count || 0,
+                        modeStats.mode3_ip_planning?.count || 0
+                    ],
+                    backgroundColor: [
+                        '#3b82f6',
+                        '#8b5cf6',
+                        '#f59e0b'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2
+            }
+        });
+    } catch (error) {
+        console.error('載入圖表失敗:', error);
+    }
 }
 
 async function loadRecentActivities() {
     try {
+        // 調用真實 API
+        const response = await fetch(`${API_BASE_URL}/admin/user-activities`);
+        const data = await response.json();
+        const activities = data.activities || [];
+        
         // 載入最近活動
-        const activitiesHtml = `
-            <div class="activity-item">
-                <div class="activity-icon">👤</div>
-                <div>
-                    <strong>新用戶註冊</strong>
-                    <p style="margin: 0; font-size: 0.875rem; color: #64748b;">3 分鐘前</p>
-                </div>
-            </div>
-            <div class="activity-item">
-                <div class="activity-icon">💬</div>
-                <div>
-                    <strong>用戶開始AI顧問對話</strong>
-                    <p style="margin: 0; font-size: 0.875rem; color: #64748b;">15 分鐘前</p>
-                </div>
-            </div>
-            <div class="activity-item">
-                <div class="activity-icon">📝</div>
-                <div>
-                    <strong>新腳本生成</strong>
-                    <p style="margin: 0; font-size: 0.875rem; color: #64748b;">30 分鐘前</p>
-                </div>
-            </div>
-        `;
+        let activitiesHtml = '';
+        
+        if (activities.length > 0) {
+            activitiesHtml = activities.map(activity => {
+                // 計算時間差
+                const timeAgo = calculateTimeAgo(activity.time);
+                
+                return `
+                    <div class="activity-item">
+                        <div class="activity-icon">${activity.icon}</div>
+                        <div>
+                            <strong>${activity.type}</strong>
+                            <p style="margin: 0; font-size: 0.875rem; color: #64748b;">
+                                ${activity.title || activity.name || ''} - ${timeAgo}
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            activitiesHtml = '<div class="empty-state" style="text-align: center; color: #64748b;">暫無活動記錄</div>';
+        }
+        
         document.getElementById('recent-activities').innerHTML = activitiesHtml;
     } catch (error) {
         console.error('載入活動失敗:', error);
+        document.getElementById('recent-activities').innerHTML = '<div class="empty-state" style="text-align: center; color: #64748b;">載入活動失敗</div>';
     }
+}
+
+function calculateTimeAgo(timeString) {
+    if (!timeString) return '未知時間';
+    
+    const now = new Date();
+    const time = new Date(timeString);
+    const diff = now - time;
+    
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days} 天前`;
+    if (hours > 0) return `${hours} 小時前`;
+    if (minutes > 0) return `${minutes} 分鐘前`;
+    return '剛剛';
 }
 
 // ===== 用戶管理 =====
@@ -261,11 +297,15 @@ async function loadUsers() {
             cardsContainer.className = 'mobile-cards-container';
             
             // 添加卡片
-            cardsContainer.innerHTML = data.users.map(user => `
+            cardsContainer.innerHTML = data.users.map(user => {
+                const isSubscribed = user.is_subscribed !== false;
+                const subscribeStatus = isSubscribed ? '已訂閱' : '未訂閱';
+                
+                return `
                 <div class="mobile-card">
                     <div class="mobile-card-header">
                         <span class="mobile-card-title">${user.name || '未命名用戶'}</span>
-                        <span class="mobile-card-badge">用戶</span>
+                        <span class="mobile-card-badge ${isSubscribed ? 'badge-success' : 'badge-danger'}">${subscribeStatus}</span>
                     </div>
                     <div class="mobile-card-row">
                         <span class="mobile-card-label">用戶ID</span>
@@ -276,32 +316,68 @@ async function loadUsers() {
                         <span class="mobile-card-value">${user.email}</span>
                     </div>
                     <div class="mobile-card-row">
+                        <span class="mobile-card-label">訂閱狀態</span>
+                        <span class="mobile-card-value" id="mobile-subscribe-status-${user.user_id}">${subscribeStatus}</span>
+                    </div>
+                    <div class="mobile-card-row">
                         <span class="mobile-card-label">註冊時間</span>
                         <span class="mobile-card-value">${formatDate(user.created_at)}</span>
                     </div>
                     <div class="mobile-card-actions">
+                        <button class="btn-action ${isSubscribed ? 'btn-danger' : 'btn-success'}" 
+                                onclick="toggleSubscribe('${user.user_id}', ${!isSubscribed})" 
+                                type="button">
+                            ${isSubscribed ? '❌ 取消訂閱' : '✅ 啟用訂閱'}
+                        </button>
                         <button class="btn-action btn-view" onclick="viewUser('${user.user_id}')" type="button">查看詳情</button>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
             
             tableContainer.appendChild(cardsContainer);
         } else {
             // 桌面版：表格佈局
             const tbody = document.getElementById('users-table-body');
-            tbody.innerHTML = data.users.map(user => `
+            tbody.innerHTML = data.users.map(user => {
+                const isSubscribed = user.is_subscribed !== false; // 預設為已訂閱
+                const subscribeStatus = isSubscribed ? 
+                    '<span class="badge badge-success">已訂閱</span>' : 
+                    '<span class="badge badge-danger">未訂閱</span>';
+                
+                return `
                 <tr>
                     <td>${user.user_id.substring(0, 12)}...</td>
                     <td>${user.email}</td>
                     <td>${user.name || '-'}</td>
+                    <td id="subscribe-status-${user.user_id}">${subscribeStatus}</td>
                     <td>${formatDate(user.created_at)}</td>
                     <td>-</td>
                     <td>-</td>
                     <td>
+                        <button class="btn-action btn-subscribe ${isSubscribed ? 'btn-danger' : 'btn-success'}" 
+                                onclick="toggleSubscribe('${user.user_id}', ${!isSubscribed})" 
+                                type="button">
+                            ${isSubscribed ? '❌ 取消訂閱' : '✅ 啟用訂閱'}
+                        </button>
                         <button class="btn-action btn-view" onclick="viewUser('${user.user_id}')" type="button">查看</button>
                     </td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
+        }
+        
+        // 添加匯出按鈕
+        const actionsDiv = document.querySelector('#users .section-actions');
+        if (actionsDiv) {
+            let exportBtn = actionsDiv.querySelector('.btn-export');
+            if (!exportBtn) {
+                exportBtn = document.createElement('button');
+                exportBtn.className = 'btn btn-secondary btn-export';
+                exportBtn.innerHTML = '<i class="icon">📥</i> 匯出 CSV';
+                exportBtn.onclick = () => exportCSV('users');
+                actionsDiv.insertBefore(exportBtn, actionsDiv.firstChild);
+            }
         }
     } catch (error) {
         console.error('載入用戶失敗:', error);
@@ -335,13 +411,24 @@ function viewUser(userId) {
 // ===== 模式分析 =====
 async function loadModes() {
     try {
-        // 載入模式統計數據
-        document.getElementById('mode1-count').textContent = '0';
-        document.getElementById('mode1-success').textContent = '0%';
-        document.getElementById('mode2-count').textContent = '0';
-        document.getElementById('mode2-avg').textContent = '0';
-        document.getElementById('mode3-count').textContent = '0';
-        document.getElementById('mode3-profile').textContent = '0';
+        // 調用真實 API
+        const response = await fetch(`${API_BASE_URL}/admin/mode-statistics`);
+        const data = await response.json();
+        
+        // 更新模式統計數據
+        const mode1 = data.mode_stats.mode1_quick_generate;
+        const mode2 = data.mode_stats.mode2_ai_consultant;
+        const mode3 = data.mode_stats.mode3_ip_planning;
+        
+        document.getElementById('mode1-count').textContent = mode1.count || 0;
+        document.getElementById('mode1-success').textContent = mode1.success_rate ? `${mode1.success_rate}%` : '0%';
+        document.getElementById('mode2-count').textContent = mode2.count || 0;
+        document.getElementById('mode2-avg').textContent = mode2.avg_turns ? `${mode2.avg_turns}` : '0';
+        document.getElementById('mode3-count').textContent = mode3.count || 0;
+        document.getElementById('mode3-profile').textContent = mode3.profiles_generated || 0;
+        
+        // 使用真實時間分布數據
+        const timeDist = data.time_distribution;
         
         // 載入模式使用時間分布圖
         if (charts.modeTime) charts.modeTime.destroy();
@@ -353,18 +440,13 @@ async function loadModes() {
                 datasets: [
                     {
                         label: '一鍵生成',
-                        data: [5, 15, 20, 10],
+                        data: [
+                            timeDist['00:00-06:00'] || 0,
+                            timeDist['06:00-12:00'] || 0,
+                            timeDist['12:00-18:00'] || 0,
+                            timeDist['18:00-24:00'] || 0
+                        ],
                         backgroundColor: '#3b82f6'
-                    },
-                    {
-                        label: 'AI顧問',
-                        data: [3, 12, 15, 8],
-                        backgroundColor: '#8b5cf6'
-                    },
-                    {
-                        label: 'IP人設規劃',
-                        data: [2, 8, 10, 5],
-                        backgroundColor: '#f59e0b'
                     }
                 ]
             },
@@ -374,6 +456,19 @@ async function loadModes() {
                 aspectRatio: 2
             }
         });
+        
+        // 添加匯出按鈕
+        const exportBtn = document.querySelector('#modes .section-actions')?.querySelector('.btn');
+        if (!exportBtn) {
+            const actionsDiv = document.querySelector('#modes .section-actions');
+            if (actionsDiv) {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-secondary';
+                btn.innerHTML = '<i class="icon">📥</i> 匯出 CSV';
+                btn.onclick = () => exportCSV('modes');
+                actionsDiv.insertBefore(btn, actionsDiv.firstChild);
+            }
+        }
     } catch (error) {
         console.error('載入模式分析失敗:', error);
         showToast('載入模式分析失敗', 'error');
@@ -484,6 +579,19 @@ async function loadConversations() {
                     </td>
                 </tr>
             `).join('');
+        }
+        
+        // 添加匯出按鈕
+        const actionsDiv = document.querySelector('#conversations .section-actions');
+        if (actionsDiv) {
+            let exportBtn = actionsDiv.querySelector('.btn-export');
+            if (!exportBtn) {
+                exportBtn = document.createElement('button');
+                exportBtn.className = 'btn btn-secondary btn-export';
+                exportBtn.innerHTML = '<i class="icon">📥</i> 匯出 CSV';
+                exportBtn.onclick = () => exportCSV('conversations');
+                actionsDiv.insertBefore(exportBtn, actionsDiv.firstChild);
+            }
         }
         
     } catch (error) {
@@ -734,6 +842,19 @@ async function loadScripts() {
         // 保存腳本數據供查看功能使用
         window.allScripts = allScripts;
         
+        // 添加匯出按鈕
+        const actionsDiv = document.querySelector('#scripts .section-actions');
+        if (actionsDiv) {
+            let exportBtn = actionsDiv.querySelector('.btn-export');
+            if (!exportBtn) {
+                exportBtn = document.createElement('button');
+                exportBtn.className = 'btn btn-secondary btn-export';
+                exportBtn.innerHTML = '<i class="icon">📥</i> 匯出 CSV';
+                exportBtn.onclick = () => exportCSV('scripts');
+                actionsDiv.insertBefore(exportBtn, actionsDiv.firstChild);
+            }
+        }
+        
     } catch (error) {
         console.error('載入腳本失敗:', error);
         showToast('載入腳本失敗', 'error');
@@ -743,33 +864,26 @@ async function loadScripts() {
 // ===== 生成記錄 =====
 async function loadGenerations() {
     try {
+        // 調用真實 API
+        const response = await fetch(`${API_BASE_URL}/admin/generations`);
+        const data = await response.json();
+        const generations = data.generations || [];
+        
         // 檢測是否為手機版
         const isMobile = window.innerWidth <= 768;
         const tableContainer = document.querySelector('#generations .table-container');
         
-        // TODO: 實現生成記錄API
-        setTimeout(() => {
-            const mockGenerations = [
-                {
-                    id: 'gen123...',
-                    user_id: 'user123...',
-                    platform: '抖音',
-                    category: '美食',
-                    type: '帳號定位',
-                    created_at: new Date()
-                }
-            ];
+        if (isMobile) {
+            // 手機版：卡片式佈局
+            tableContainer.innerHTML = '';
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = 'mobile-cards-container';
             
-            if (isMobile) {
-                // 手機版：卡片式佈局
-                tableContainer.innerHTML = '';
-                const cardsContainer = document.createElement('div');
-                cardsContainer.className = 'mobile-cards-container';
-                
-                cardsContainer.innerHTML = mockGenerations.map(gen => `
+            if (generations.length > 0) {
+                cardsContainer.innerHTML = generations.map(gen => `
                     <div class="mobile-card">
                         <div class="mobile-card-header">
-                            <span class="mobile-card-title">${gen.type}</span>
+                            <span class="mobile-card-title">${gen.type || '生成記錄'}</span>
                             <span class="mobile-card-badge">${gen.platform}</span>
                         </div>
                         <div class="mobile-card-row">
@@ -777,12 +891,12 @@ async function loadGenerations() {
                             <span class="mobile-card-value">${gen.id}</span>
                         </div>
                         <div class="mobile-card-row">
-                            <span class="mobile-card-label">用戶ID</span>
-                            <span class="mobile-card-value">${gen.user_id}</span>
+                            <span class="mobile-card-label">用戶</span>
+                            <span class="mobile-card-value">${gen.user_name}</span>
                         </div>
                         <div class="mobile-card-row">
-                            <span class="mobile-card-label">分類</span>
-                            <span class="mobile-card-value">${gen.category}</span>
+                            <span class="mobile-card-label">主題</span>
+                            <span class="mobile-card-value">${gen.topic}</span>
                         </div>
                         <div class="mobile-card-row">
                             <span class="mobile-card-label">時間</span>
@@ -790,23 +904,42 @@ async function loadGenerations() {
                         </div>
                     </div>
                 `).join('');
-                
-                tableContainer.appendChild(cardsContainer);
             } else {
-                // 桌面版：表格佈局
-                const tbody = document.getElementById('generations-table-body');
-                tbody.innerHTML = mockGenerations.map(gen => `
+                cardsContainer.innerHTML = '<div class="empty-state">暫無生成記錄</div>';
+            }
+            
+            tableContainer.appendChild(cardsContainer);
+        } else {
+            // 桌面版：表格佈局
+            const tbody = document.getElementById('generations-table-body');
+            if (generations.length > 0) {
+                tbody.innerHTML = generations.map(gen => `
                     <tr>
                         <td>${gen.id}</td>
-                        <td>${gen.user_id}</td>
+                        <td>${gen.user_name}</td>
                         <td>${gen.platform}</td>
-                        <td>${gen.category}</td>
+                        <td>${gen.topic}</td>
                         <td>${gen.type}</td>
                         <td>${formatDate(gen.created_at)}</td>
                     </tr>
                 `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">暫無生成記錄</td></tr>';
             }
-        }, 1000);
+        }
+        
+        // 添加匯出按鈕
+        const actionsDiv = document.querySelector('#generations .section-actions');
+        if (actionsDiv) {
+            let exportBtn = actionsDiv.querySelector('.btn-export');
+            if (!exportBtn) {
+                exportBtn = document.createElement('button');
+                exportBtn.className = 'btn btn-secondary btn-export';
+                exportBtn.innerHTML = '<i class="icon">📥</i> 匯出 CSV';
+                exportBtn.onclick = () => exportCSV('generations');
+                actionsDiv.insertBefore(exportBtn, actionsDiv.firstChild);
+            }
+        }
     } catch (error) {
         console.error('載入生成記錄失敗:', error);
         showToast('載入生成記錄失敗', 'error');
@@ -816,16 +949,20 @@ async function loadGenerations() {
 // ===== 數據分析 =====
 async function loadAnalytics() {
     try {
+        // 調用真實 API
+        const response = await fetch(`${API_BASE_URL}/admin/analytics-data`);
+        const data = await response.json();
+        
         // 平台使用分布
         if (charts.platform) charts.platform.destroy();
         const platformCtx = document.getElementById('platform-chart');
         charts.platform = new Chart(platformCtx, {
             type: 'pie',
             data: {
-                labels: ['抖音', '小紅書', 'Instagram', 'YouTube'],
+                labels: data.platform?.labels || ['暫無數據'],
                 datasets: [{
-                    data: [45, 25, 20, 10],
-                    backgroundColor: ['#3b82f6', '#ec4899', '#8b5cf6', '#ef4444']
+                    data: data.platform?.data || [1],
+                    backgroundColor: ['#3b82f6', '#ec4899', '#8b5cf6', '#ef4444', '#10b981']
                 }]
             },
             options: {
@@ -841,10 +978,10 @@ async function loadAnalytics() {
         charts.timeUsage = new Chart(timeUsageCtx, {
             type: 'bar',
             data: {
-                labels: ['週一', '週二', '週三', '週四', '週五', '週六', '週日'],
+                labels: data.time_usage?.labels || ['週一', '週二', '週三', '週四', '週五', '週六', '週日'],
                 datasets: [{
                     label: '使用次數',
-                    data: [120, 150, 180, 145, 200, 220, 180],
+                    data: data.time_usage?.data || [0, 0, 0, 0, 0, 0, 0],
                     backgroundColor: '#10b981'
                 }]
             },
@@ -861,10 +998,10 @@ async function loadAnalytics() {
         charts.activity = new Chart(activityCtx, {
             type: 'line',
             data: {
-                labels: ['第1週', '第2週', '第3週', '第4週'],
+                labels: data.activity?.labels || ['第1週', '第2週', '第3週', '第4週'],
                 datasets: [{
                     label: '活躍用戶數',
-                    data: [50, 65, 70, 85],
+                    data: data.activity?.data || [0, 0, 0, 0],
                     borderColor: '#f59e0b',
                     backgroundColor: 'rgba(245, 158, 11, 0.1)',
                     tension: 0.4
@@ -883,9 +1020,9 @@ async function loadAnalytics() {
         charts.contentType = new Chart(contentTypeCtx, {
             type: 'doughnut',
             data: {
-                labels: ['美食', '旅遊', '時尚', '教育', '其他'],
+                labels: data.content_type?.labels || ['暫無數據'],
                 datasets: [{
-                    data: [30, 25, 20, 15, 10],
+                    data: data.content_type?.data || [1],
                     backgroundColor: [
                         '#3b82f6',
                         '#8b5cf6',
@@ -943,4 +1080,87 @@ document.addEventListener('click', function(event) {
         }
     }
 });
+
+// ===== 訂閱管理功能 =====
+async function toggleSubscribe(userId, subscribe) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/subscription`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ is_subscribed: subscribe })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showToast(subscribe ? '已啟用訂閱' : '已取消訂閱', 'success');
+            
+            // 更新 UI
+            updateSubscribeUI(userId, subscribe);
+        } else {
+            const error = await response.json();
+            showToast(error.error || '操作失敗', 'error');
+        }
+    } catch (error) {
+        console.error('修改訂閱狀態失敗:', error);
+        showToast('修改訂閱狀態失敗', 'error');
+    }
+}
+
+function updateSubscribeUI(userId, isSubscribed) {
+    // 更新桌面版
+    const statusCell = document.getElementById(`subscribe-status-${userId}`);
+    if (statusCell) {
+        statusCell.innerHTML = isSubscribed ? 
+            '<span class="badge badge-success">已訂閱</span>' : 
+            '<span class="badge badge-danger">未訂閱</span>';
+    }
+    
+    // 更新手機版
+    const mobileStatusCell = document.getElementById(`mobile-subscribe-status-${userId}`);
+    if (mobileStatusCell) {
+        mobileStatusCell.textContent = isSubscribed ? '已訂閱' : '未訂閱';
+    }
+    
+    // 更新按鈕
+    const rows = document.querySelectorAll(`[id^='${userId}']`);
+    rows.forEach(row => {
+        const parentRow = row.closest('tr') || row.closest('.mobile-card');
+        if (parentRow) {
+            const buttons = parentRow.querySelectorAll('.btn-subscribe');
+            buttons.forEach(btn => {
+                btn.textContent = isSubscribed ? '❌ 取消訂閱' : '✅ 啟用訂閱';
+                btn.className = `btn-action btn-subscribe ${isSubscribed ? 'btn-danger' : 'btn-success'}`;
+                btn.setAttribute('onclick', `toggleSubscribe('${userId}', ${!isSubscribed})`);
+            });
+        }
+    });
+    
+    // 重新載入列表以更新所有數據
+    loadUsers();
+}
+
+// ===== CSV 匯出功能 =====
+async function exportCSV(type) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/export/${type}`);
+        const blob = await response.blob();
+        
+        // 創建下載連結
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${type}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        showToast(`已匯出 ${type}.csv`, 'success');
+    } catch (error) {
+        console.error('匯出 CSV 失敗:', error);
+        showToast('匯出 CSV 失敗', 'error');
+    }
+}
  

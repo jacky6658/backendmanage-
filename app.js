@@ -401,15 +401,155 @@ function filterUsers() {
     });
 }
 
-function viewUser(userId) {
+async function viewUser(userId) {
     // 檢查按鈕是否被禁用
     if (event && event.target.disabled) return;
     
-    // 顯示用戶詳情
-    alert(`查看用戶詳情\n用戶ID: ${userId}`);
-    
-    // 可以進一步實現跳轉到詳情頁或打開彈窗
     showToast('正在載入用戶詳細資訊...', 'info');
+    
+    try {
+        // 獲取用戶訂單記錄
+        const ordersResponse = await fetch(`${API_BASE_URL}/user/orders/${userId}`);
+        let orders = [];
+        if (ordersResponse.ok) {
+            const ordersData = await ordersResponse.json();
+            orders = ordersData.orders || [];
+        }
+        
+        // 獲取用戶授權資訊
+        const licenseResponse = await fetch(`${API_BASE_URL}/user/license/${userId}`);
+        let licenseData = null;
+        if (licenseResponse.ok) {
+            licenseData = await licenseResponse.json();
+        }
+        
+        // 構建詳情內容
+        let content = `<div style="padding: 20px;">`;
+        content += `<h3 style="margin-bottom: 16px;">用戶詳情</h3>`;
+        content += `<p><strong>用戶ID：</strong>${userId}</p>`;
+        
+        // 授權資訊
+        if (licenseData && licenseData.tier !== 'none') {
+            const expiresAt = licenseData.expires_at ? new Date(licenseData.expires_at).toLocaleString('zh-TW', {
+                timeZone: 'Asia/Taipei',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }) : '未知';
+            
+            content += `<div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border-radius: 8px;">`;
+            content += `<h4 style="margin-bottom: 8px;">🔑 授權資訊</h4>`;
+            content += `<p><strong>等級：</strong>${licenseData.tier}</p>`;
+            content += `<p><strong>席次：</strong>${licenseData.seats || 1}</p>`;
+            content += `<p><strong>到期時間：</strong>${expiresAt}</p>`;
+            content += `<p><strong>狀態：</strong>${licenseData.status === 'active' ? '✅ 有效' : '❌ 已過期'}</p>`;
+            content += `</div>`;
+        }
+        
+        // 購買記錄
+        if (orders.length > 0) {
+            content += `<div style="margin-top: 16px;">`;
+            content += `<h4 style="margin-bottom: 8px;">💳 購買記錄</h4>`;
+            content += `<table style="width: 100%; border-collapse: collapse;">`;
+            content += `<thead><tr style="background: #f3f4f6;">`;
+            content += `<th style="padding: 8px; text-align: left;">訂單編號</th>`;
+            content += `<th style="padding: 8px; text-align: left;">方案</th>`;
+            content += `<th style="padding: 8px; text-align: left;">金額</th>`;
+            content += `<th style="padding: 8px; text-align: left;">狀態</th>`;
+            content += `<th style="padding: 8px; text-align: left;">付款時間</th>`;
+            content += `</tr></thead><tbody>`;
+            
+            orders.forEach(order => {
+                const paidDate = order.paid_at ? new Date(order.paid_at).toLocaleString('zh-TW', {
+                    timeZone: 'Asia/Taipei',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : '-';
+                
+                content += `<tr>`;
+                content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.order_id || order.id}</td>`;
+                content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.plan_type === 'monthly' ? '月費' : '年費'}</td>`;
+                content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">NT$${order.amount?.toLocaleString() || 0}</td>`;
+                content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.payment_status === 'paid' ? '✅ 已付款' : '⏳ 待付款'}</td>`;
+                content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${paidDate}</td>`;
+                content += `</tr>`;
+            });
+            
+            content += `</tbody></table>`;
+            content += `</div>`;
+        } else {
+            content += `<p style="margin-top: 16px; color: #64748b;">尚無購買記錄</p>`;
+        }
+        
+        content += `</div>`;
+        
+        // 顯示自定義彈窗
+        showUserDetailModal(content);
+    } catch (error) {
+        console.error('載入用戶詳情失敗:', error);
+        showToast('載入用戶詳情失敗', 'error');
+        alert(`查看用戶詳情\n用戶ID: ${userId}\n\n載入詳細資訊失敗，請稍後再試。`);
+    }
+}
+
+function showUserDetailModal(content) {
+    // 創建模態框
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    `;
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 800px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    `;
+    
+    modalContent.innerHTML = content;
+    
+    // 添加關閉按鈕
+    const closeBtn = document.createElement('button');
+    closeBtn.textContent = '關閉';
+    closeBtn.style.cssText = `
+        padding: 10px 20px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        margin: 20px;
+        margin-top: 10px;
+        font-weight: 600;
+    `;
+    closeBtn.onclick = () => document.body.removeChild(modal);
+    
+    modalContent.appendChild(closeBtn);
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // 點擊背景關閉
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    };
 }
 
 // ===== 模式分析 =====

@@ -1237,6 +1237,25 @@ function formatDate(dateString) {
     });
 }
 
+// 與前端一致的日期時間格式化（含時區處理與容錯）
+function formatDateTime(dateString) {
+    if (!dateString) return '-';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '-';
+        return date.toLocaleString('zh-TW', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    } catch (_) {
+        return '-';
+    }
+}
+
 // 手機版側邊欄控制
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');

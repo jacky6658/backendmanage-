@@ -49,6 +49,7 @@ function switchSection(section) {
         'users': '用戶管理',
         'modes': '模式分析',
         'conversations': '對話記錄',
+        'long-term-memory': '長期記憶',
         'scripts': '腳本管理',
         'orders': '購買記錄',
         'generations': '生成記錄',
@@ -79,6 +80,9 @@ function loadSectionData(section) {
             break;
         case 'conversations':
             loadConversations();
+            break;
+        case 'long-term-memory':
+            loadLongTermMemory();
             break;
         case 'scripts':
             loadScripts();
@@ -838,6 +842,106 @@ function deleteScript(scriptId) {
         showToast('腳本已刪除', 'success');
         // TODO: 實現真實的刪除API調用
         // loadScripts(); // 重新載入列表
+    }
+}
+
+// ===== 長期記憶管理 =====
+async function loadLongTermMemory() {
+    try {
+        const filter = document.getElementById('memory-filter').value;
+        
+        // 載入統計數據
+        await loadMemoryStats();
+        
+        // 載入記憶列表
+        const response = await fetch(`${API_BASE_URL}/admin/long-term-memory${filter !== 'all' ? `?conversation_type=${filter}` : ''}`);
+        const data = await response.json();
+        const memories = data.memories || [];
+        
+        // 顯示記憶列表
+        const tbody = document.getElementById('memory-table-body');
+        if (memories.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">暫無長期記憶記錄</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = memories.map(memory => `
+            <tr>
+                <td>
+                    <div class="user-info">
+                        <span class="user-name">${memory.user_name || memory.user_id}</span>
+                        <span class="user-email">${memory.user_email || ''}</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="conversation-type ${memory.conversation_type}">
+                        ${getConversationTypeLabel(memory.conversation_type)}
+                    </span>
+                </td>
+                <td>
+                    <span class="session-id">${memory.session_id ? memory.session_id.substring(0, 8) + '...' : '-'}</span>
+                </td>
+                <td>
+                    <span class="message-role ${memory.message_role}">
+                        ${memory.message_role === 'user' ? '👤 用戶' : '🤖 AI'}
+                    </span>
+                </td>
+                <td>
+                    <div class="content-preview">
+                        ${memory.message_content ? memory.message_content.substring(0, 100) + (memory.message_content.length > 100 ? '...' : '') : '-'}
+                    </div>
+                </td>
+                <td>
+                    <span class="timestamp">${formatDateTime(memory.created_at)}</span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="viewMemoryDetail(${memory.id})">查看</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteMemory(${memory.id})">刪除</button>
+                </td>
+            </tr>
+        `).join('');
+        
+    } catch (error) {
+        console.error('載入長期記憶失敗:', error);
+        showToast('載入長期記憶失敗', 'error');
+    }
+}
+
+async function loadMemoryStats() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/memory-stats`);
+        const data = await response.json();
+        
+        document.getElementById('total-memories').textContent = data.total_memories || 0;
+        document.getElementById('active-users-memory').textContent = data.active_users || 0;
+        document.getElementById('today-memories').textContent = data.today_memories || 0;
+        document.getElementById('avg-memories-per-user').textContent = data.avg_memories_per_user || 0;
+        
+    } catch (error) {
+        console.error('載入記憶統計失敗:', error);
+    }
+}
+
+function getConversationTypeLabel(type) {
+    const labels = {
+        'ai_advisor': 'AI顧問',
+        'ip_planning': 'IP人設規劃',
+        'llm_chat': 'LLM對話',
+        'script_generation': '腳本生成',
+        'general': '一般對話'
+    };
+    return labels[type] || type;
+}
+
+function viewMemoryDetail(memoryId) {
+    // 實作查看記憶詳情
+    showToast('查看記憶詳情功能開發中', 'info');
+}
+
+function deleteMemory(memoryId) {
+    if (confirm('確定要刪除這筆記憶記錄嗎？')) {
+        // 實作刪除記憶
+        showToast('刪除記憶功能開發中', 'info');
     }
 }
 

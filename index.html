@@ -55,9 +55,17 @@
                     <span class="icon">💬</span>
                     <span>對話記錄</span>
                 </a>
+                <a href="#" class="nav-item" data-section="long-term-memory">
+                    <span class="icon">🧠</span>
+                    <span>長期記憶</span>
+                </a>
                 <a href="#" class="nav-item" data-section="scripts">
                     <span class="icon">📝</span>
                     <span>腳本管理</span>
+                </a>
+                <a href="#" class="nav-item" data-section="orders">
+                    <span class="icon">💳</span>
+                    <span>購買記錄</span>
                 </a>
                 <a href="#" class="nav-item" data-section="generations">
                     <span class="icon">✨</span>
@@ -238,6 +246,68 @@
                 </div>
             </div>
 
+            <!-- 長期記憶頁面 -->
+            <div class="section" id="long-term-memory">
+                <div class="section-header">
+                    <h2>長期記憶管理</h2>
+                    <select id="memory-filter" onchange="loadLongTermMemory()">
+                        <option value="all">全部記憶</option>
+                        <option value="ai_advisor">AI顧問對話</option>
+                        <option value="ip_planning">IP人設規劃</option>
+                        <option value="llm_chat">LLM對話</option>
+                        <option value="script_generation">腳本生成</option>
+                    </select>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">🧠</div>
+                        <div class="stat-info">
+                            <h3 id="total-memories">-</h3>
+                            <p>總記憶數</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <h3 id="active-users-memory">-</h3>
+                            <p>活躍用戶</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💬</div>
+                        <div class="stat-info">
+                            <h3 id="today-memories">-</h3>
+                            <p>今日新增</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-info">
+                            <h3 id="avg-memories-per-user">-</h3>
+                            <p>平均記憶/用戶</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table class="data-table" id="memory-table">
+                        <thead>
+                            <tr>
+                                <th>用戶</th>
+                                <th>對話類型</th>
+                                <th>會話ID</th>
+                                <th>角色</th>
+                                <th>內容預覽</th>
+                                <th>時間</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="memory-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- 腳本管理頁面 -->
             <div class="section" id="scripts">
                 <div class="section-header">
@@ -267,6 +337,16 @@
                         <tbody id="scripts-table-body"></tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- 購買記錄頁面 -->
+            <div class="section" id="orders">
+                <div class="section-header">
+                    <h2>購買記錄</h2>
+                    <button class="btn-export" onclick="exportCSV('orders')">📥 匯出 CSV</button>
+                </div>
+                <div class="stats-grid" style="margin-bottom: 20px;"></div>
+                <div class="table-container"></div>
             </div>
 
             <!-- 生成記錄頁面 -->

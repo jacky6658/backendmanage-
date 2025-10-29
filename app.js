@@ -934,15 +934,50 @@ function getConversationTypeLabel(type) {
 }
 
 function viewMemoryDetail(memoryId) {
-    // 實作查看記憶詳情
-    showToast('查看記憶詳情功能開發中', 'info');
+    (async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/admin/long-term-memory/${memoryId}`);
+            if (!res.ok) {
+                showToast('載入記憶詳情失敗', 'error');
+                return;
+            }
+            const m = await res.json();
+            const content = `
+                <div style="padding:20px;">
+                  <h3 style="margin:0 0 12px 0;">長期記憶詳情</h3>
+                  <div style="margin-bottom:8px;"><strong>用戶：</strong>${m.user_name || m.user_id} <span style="color:#64748b;">${m.user_email || ''}</span></div>
+                  <div style="margin-bottom:8px;"><strong>對話類型：</strong>${getConversationTypeLabel(m.conversation_type)}</div>
+                  <div style="margin-bottom:8px;"><strong>會話ID：</strong>${m.session_id || '-'}</div>
+                  <div style="margin-bottom:8px;"><strong>角色：</strong>${m.message_role === 'user' ? '👤 用戶' : '🤖 AI'}</div>
+                  <div style="margin-bottom:8px;"><strong>建立時間：</strong>${formatDateTime(m.created_at)}</div>
+                  <div style="margin-top:12px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; white-space:pre-wrap;">${m.message_content || '-'}</div>
+                </div>`;
+            showUserDetailModal(content);
+        } catch (e) {
+            console.error('載入記憶詳情失敗:', e);
+            showToast('載入記憶詳情失敗', 'error');
+        }
+    })();
 }
 
 function deleteMemory(memoryId) {
-    if (confirm('確定要刪除這筆記憶記錄嗎？')) {
-        // 實作刪除記憶
-        showToast('刪除記憶功能開發中', 'info');
-    }
+    if (!confirm('確定要刪除這筆記憶記錄嗎？')) return;
+    (async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/admin/long-term-memory/${memoryId}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                showToast(err.error || '刪除失敗', 'error');
+                return;
+            }
+            showToast('已刪除', 'success');
+            // 重新載入列表
+            loadLongTermMemory();
+        } catch (e) {
+            console.error('刪除記憶失敗:', e);
+            showToast('刪除失敗', 'error');
+        }
+    })();
 }
 
 // ===== 腳本管理 =====

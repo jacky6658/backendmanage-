@@ -4,6 +4,33 @@ const API_BASE_URL = 'https://aivideobackend.zeabur.app/api';
 // 全域變數
 let charts = {};
 
+// ===== DOM 安全渲染工具（依據 Admin_Dashboard_DOM_Render_Fix.md） =====
+function setHTML(sel, html) {
+    const el = typeof sel === 'string' ? document.querySelector(sel) : sel;
+    if (!el) {
+        console.warn('[render] missing container:', sel);
+        return;
+    }
+    el.innerHTML = html;
+}
+
+function assertEl(sel) {
+    const el = document.querySelector(sel);
+    console.assert(el, 'missing element for', sel);
+    return el;
+}
+
+async function waitFor(selector, timeout = 5000, interval = 50) {
+    const start = Date.now();
+    return new Promise((resolve, reject) => {
+        const t = setInterval(() => {
+            const el = document.querySelector(selector);
+            if (el) { clearInterval(t); resolve(el); }
+            else if (Date.now() - start > timeout) { clearInterval(t); reject(new Error('waitFor timeout: ' + selector)); }
+        }, interval);
+    });
+}
+
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
     initializeNavigation();
@@ -260,11 +287,12 @@ async function loadRecentActivities() {
         } else {
             activitiesHtml = '<div class="empty-state" style="text-align: center; color: #64748b;">暫無活動記錄</div>';
         }
-        
-        document.getElementById('recent-activities').innerHTML = activitiesHtml;
+        const actEl = await waitFor('#recent-activities', 5000).catch(() => null);
+        if (actEl) setHTML(actEl, activitiesHtml);
     } catch (error) {
         console.error('載入活動失敗:', error);
-        document.getElementById('recent-activities').innerHTML = '<div class="empty-state" style="text-align: center; color: #64748b;">載入活動失敗</div>';
+        const actEl = document.querySelector('#recent-activities');
+        if (actEl) setHTML(actEl, '<div class="empty-state" style="text-align: center; color: #64748b;">載入活動失敗</div>');
     }
 }
 
@@ -630,7 +658,11 @@ async function loadConversations() {
         
         // 檢測是否為手機版
         const isMobile = window.innerWidth <= 768;
-        const tableContainer = document.querySelector('#conversations .table-container');
+        const tableContainer = await waitFor('#conversations .table-container', 8000).catch(() => null);
+        if (!tableContainer) {
+            console.warn('[conversations] container missing');
+            return;
+        }
         
         // 直接獲取所有對話記錄
         const response = await fetch(`${API_BASE_URL}/admin/conversations`);
@@ -650,7 +682,7 @@ async function loadConversations() {
         
         if (isMobile) {
             // 手機版：卡片式佈局
-            tableContainer.innerHTML = '';
+            setHTML(tableContainer, '');
             const cardsContainer = document.createElement('div');
             cardsContainer.className = 'mobile-cards-container';
             
@@ -681,8 +713,9 @@ async function loadConversations() {
             tableContainer.appendChild(cardsContainer);
         } else {
             // 桌面版：表格佈局
-            const tbody = document.getElementById('conversations-table-body');
-            tbody.innerHTML = allConversations.map(conv => `
+            const tbody = await waitFor('#conversations-table-body', 8000).catch(() => null);
+            if (!tbody) return;
+            setHTML(tbody, allConversations.map(conv => `
                 <tr>
                     <td>${conv.user_id.substring(0, 12)}...</td>
                     <td>${conv.mode}</td>
@@ -693,7 +726,7 @@ async function loadConversations() {
                         <button class="btn-action btn-view" onclick="viewConversation('${conv.user_id}', '${conv.mode}')" type="button">查看</button>
                     </td>
                 </tr>
-            `).join('');
+            `).join(''));
         }
         
         // 添加匯出按鈕
@@ -715,10 +748,10 @@ async function loadConversations() {
         const isMobile = window.innerWidth <= 768;
         const tableContainer = document.querySelector('#conversations .table-container');
         if (isMobile) {
-            tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">載入失敗</div>';
+            if (tableContainer) setHTML(tableContainer, '<div style="text-align: center; padding: 2rem;">載入失敗</div>');
         } else {
-            document.getElementById('conversations-table-body').innerHTML = 
-                '<tr><td colspan="6" style="text-align: center; padding: 2rem;">載入失敗</td></tr>';
+            const tbody = document.querySelector('#conversations-table-body');
+            if (tbody) setHTML(tbody, '<tr><td colspan="6" style="text-align: center; padding: 2rem;">載入失敗</td></tr>');
         }
     }
 }
@@ -859,13 +892,14 @@ async function loadLongTermMemory() {
         const memories = data.memories || [];
         
         // 顯示記憶列表
-        const tbody = document.getElementById('memory-table-body');
+        const tbody = await waitFor('#memory-table-body', 8000).catch(() => null);
+        if (!tbody) return;
         if (memories.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">暫無長期記憶記錄</td></tr>';
+            setHTML(tbody, '<tr><td colspan="7" style="text-align: center; padding: 2rem;">暫無長期記憶記錄</td></tr>');
             return;
         }
         
-        tbody.innerHTML = memories.map(memory => `
+        setHTML(tbody, memories.map(memory => `
             <tr>
                 <td>
                     <div class="user-info">
@@ -899,7 +933,7 @@ async function loadLongTermMemory() {
                     <button class="btn btn-sm btn-danger" onclick="deleteMemory(${memory.id})">刪除</button>
                 </td>
             </tr>
-        `).join('');
+        `).join(''));
         
     } catch (error) {
         console.error('載入長期記憶失敗:', error);
@@ -985,7 +1019,11 @@ async function loadScripts() {
     try {
         // 檢測是否為手機版
         const isMobile = window.innerWidth <= 768;
-        const tableContainer = document.querySelector('#scripts .table-container');
+        const tableContainer = await waitFor('#scripts .table-container', 8000).catch(() => null);
+        if (!tableContainer) {
+            console.warn('[scripts] container missing');
+            return;
+        }
         
         // 直接獲取所有腳本
         const response = await fetch(`${API_BASE_URL}/admin/scripts`);
@@ -1005,7 +1043,7 @@ async function loadScripts() {
         
         if (isMobile) {
             // 手機版：卡片式佈局
-            tableContainer.innerHTML = '';
+            setHTML(tableContainer, '');
             const cardsContainer = document.createElement('div');
             cardsContainer.className = 'mobile-cards-container';
             
@@ -1037,8 +1075,9 @@ async function loadScripts() {
             tableContainer.appendChild(cardsContainer);
         } else {
             // 桌面版：表格佈局
-            const tbody = document.getElementById('scripts-table-body');
-            tbody.innerHTML = allScripts.map((script, index) => `
+            const tbody = await waitFor('#scripts-table-body', 8000).catch(() => null);
+            if (!tbody) return;
+            setHTML(tbody, allScripts.map((script, index) => `
                 <tr>
                     <td>${script.id}</td>
                     <td>${script.user_id.substring(0, 12)}...</td>
@@ -1051,7 +1090,7 @@ async function loadScripts() {
                         <button class="btn-action btn-delete" onclick="deleteScript(${script.id})" type="button">刪除</button>
                     </td>
                 </tr>
-            `).join('');
+            `).join(''));
         }
         
         // 保存腳本數據供查看功能使用
@@ -1086,11 +1125,15 @@ async function loadGenerations() {
         
         // 檢測是否為手機版
         const isMobile = window.innerWidth <= 768;
-        const tableContainer = document.querySelector('#generations .table-container');
+        const tableContainer = await waitFor('#generations .table-container', 8000).catch(() => null);
+        if (!tableContainer) {
+            console.warn('[generations] container missing');
+            return;
+        }
         
         if (isMobile) {
             // 手機版：卡片式佈局
-            tableContainer.innerHTML = '';
+            setHTML(tableContainer, '');
             const cardsContainer = document.createElement('div');
             cardsContainer.className = 'mobile-cards-container';
             
@@ -1126,9 +1169,10 @@ async function loadGenerations() {
             tableContainer.appendChild(cardsContainer);
         } else {
             // 桌面版：表格佈局
-            const tbody = document.getElementById('generations-table-body');
+            const tbody = await waitFor('#generations-table-body', 8000).catch(() => null);
+            if (!tbody) return;
             if (generations.length > 0) {
-                tbody.innerHTML = generations.map(gen => `
+                setHTML(tbody, generations.map(gen => `
                     <tr>
                         <td>${gen.id}</td>
                         <td>${gen.user_name}</td>
@@ -1137,9 +1181,9 @@ async function loadGenerations() {
                         <td>${gen.type}</td>
                         <td>${formatDate(gen.created_at)}</td>
                     </tr>
-                `).join('');
+                `).join(''));
             } else {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">暫無生成記錄</td></tr>';
+                setHTML(tbody, '<tr><td colspan="6" style="text-align: center; padding: 2rem;">暫無生成記錄</td></tr>');
             }
         }
         
@@ -1407,7 +1451,7 @@ async function loadOrders() {
         
         console.log('訂單數據:', allOrders);
         
-        const tableContainer = document.querySelector('#orders .table-container');
+        const tableContainer = await waitFor('#orders .table-container', 8000).catch(() => null);
         if (!tableContainer) {
             console.error('找不到訂單表格容器');
             return;
@@ -1485,7 +1529,7 @@ async function loadOrders() {
             </div>
         `;
         
-        tableContainer.innerHTML = tableHTML;
+        setHTML(tableContainer, tableHTML);
         
         // 更新統計
         const totalRevenue = allOrders.filter(o => o.payment_status === 'paid').reduce((sum, o) => sum + (o.amount || 0), 0);
